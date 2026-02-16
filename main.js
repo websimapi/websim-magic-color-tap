@@ -135,6 +135,17 @@ const generatePresets = () => {
         { src: 'preset_cupcake.png', label: 'Cupcake', tags: ['food', 'dessert', 'sweet'] },
         { src: 'preset_butterfly.png', label: 'Butterfly', tags: ['insect', 'nature', 'fly'] },
         { src: 'preset_dino.png', label: 'Dino', tags: ['animal', 'prehistoric', 'rex'] },
+        // New Assets
+        { src: 'preset_rocket.png', label: 'Rocket', tags: ['space', 'fly', 'scifi'] },
+        { src: 'preset_turtle.png', label: 'Turtle', tags: ['animal', 'ocean', 'slow'] },
+        { src: 'preset_castle.png', label: 'Castle', tags: ['fantasy', 'building', 'royal'] },
+        { src: 'preset_dragon.png', label: 'Dragon', tags: ['fantasy', 'monster', 'fire'] },
+        { src: 'preset_icecream.png', label: 'Ice Cream', tags: ['food', 'dessert', 'summer'] },
+        { src: 'preset_sun.png', label: 'Sun', tags: ['nature', 'sky', 'hot'] },
+        { src: 'preset_fish.png', label: 'Fish', tags: ['animal', 'ocean', 'water'] },
+        { src: 'preset_bird.png', label: 'Bird', tags: ['animal', 'fly', 'sky'] },
+        { src: 'preset_tree.png', label: 'Tree', tags: ['nature', 'plant', 'fruit'] },
+        { src: 'preset_plane.png', label: 'Plane', tags: ['vehicle', 'fly', 'transport'] },
     ];
 
     const adjectives = ['Super', 'Happy', 'Magic', 'Little', 'Big', 'Funny', 'Cool', 'Wild', 'Space', 'Rainbow'];
