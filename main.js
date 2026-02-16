@@ -4,6 +4,10 @@ const room = new WebsimSocket();
 // Optimized Flood Fill with Visited Tracking and Loop Prevention
 function floodFill(displayData, referenceData, startX, startY, width, height) {
     const startIdx = (startY * width + startX) * 4;
+    const maxIdx = width * height * 4;
+
+    // Safety bounds check
+    if (startIdx < 0 || startIdx >= maxIdx) return;
     
     // Colors
     const startR = displayData[startIdx];
@@ -28,10 +32,17 @@ function floodFill(displayData, referenceData, startX, startY, width, height) {
     const stack = [startIdx];
     visited[startIdx / 4] = 1;
     
-    const maxIdx = width * height * 4;
     const tolerance = 40; 
+    let iterations = 0;
+    const MAX_ITERATIONS = 2000000; // Prevent infinite loop freeze
 
     while (stack.length) {
+        iterations++;
+        if (iterations > MAX_ITERATIONS) {
+            console.warn("Flood fill hit safety limit");
+            break;
+        }
+
         const idx = stack.pop();
         
         // Reveal Color
@@ -73,6 +84,39 @@ function floodFill(displayData, referenceData, startX, startY, width, height) {
             }
         }
     }
+}
+
+// Check what percentage of the image is colored correctly
+function checkCompletion(displayData, referenceData) {
+    let colored = 0;
+    let total = 0;
+    const len = displayData.length;
+    
+    for (let i = 0; i < len; i += 4) {
+        // Skip pure black lines (assuming < 50 is line)
+        if (referenceData[i] < 50 && referenceData[i+1] < 50 && referenceData[i+2] < 50) {
+            continue;
+        }
+        
+        total++;
+        
+        const dr = displayData[i];
+        const dg = displayData[i+1];
+        const db = displayData[i+2];
+        
+        const rr = referenceData[i];
+        const rg = referenceData[i+1];
+        const rb = referenceData[i+2];
+        
+        // Check if display matches reference
+        // Note: Reference might be white in some spots, and display starts white.
+        // This counts as "done".
+        if (Math.abs(dr - rr) < 30 && Math.abs(dg - rg) < 30 && Math.abs(db - rb) < 30) {
+            colored++;
+        }
+    }
+    
+    return total === 0 ? 1 : colored / total;
 }
 
 // React Components
@@ -120,8 +164,27 @@ function App() {
     const [screen, setScreen] = useState('home'); // home, canvas
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
-    const [currentImage, setCurrentImage] = useState(null); // The original color image
-    const [canvasRef, setCanvasRef] = useState(null); // Ref to the visible canvas
+    const [currentImage, setCurrentImage] = useState(null); 
+    const [stars, setStars] = useState(0);
+
+    // Initialize Stars
+    useEffect(() => {
+        const saved = localStorage.getItem('magic_color_stars');
+        if (saved) setStars(parseInt(saved, 10));
+    }, []);
+
+    const addStar = () => {
+        const newStars = stars + 1;
+        setStars(newStars);
+        localStorage.setItem('magic_color_stars', newStars);
+        
+        // Attempt to save to "1 row" DB concept
+        // We use a collection 'player_stats' to represent the "second column" of data
+        room.collection('player_stats').create({
+            stars: newStars,
+            timestamp: Date.now()
+        }).catch(e => console.log('Stat sync skip', e));
+    };
     
     // Debounce Logic for typing
     useEffect(() => {
@@ -181,6 +244,7 @@ function App() {
                     setPrompt={setPrompt} 
                     onGenerate={handleGenerate}
                     onPreset={handlePreset}
+                    stars={stars}
                 />
             )}
             
@@ -188,6 +252,7 @@ function App() {
                 <CanvasScreen 
                     imageObj={currentImage} 
                     onBack={handleBack}
+                    onComplete={addStar}
                 />
             )}
 
@@ -201,7 +266,7 @@ function App() {
     );
 }
 
-function HomeScreen({ prompt, setPrompt, onGenerate, onPreset }) {
+function HomeScreen({ prompt, setPrompt, onGenerate, onPreset, stars }) {
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             onGenerate(prompt);
@@ -210,7 +275,17 @@ function HomeScreen({ prompt, setPrompt, onGenerate, onPreset }) {
 
     return (
         <div className="screen center-content">
-            <h1>Magic Color Tap</h1>
+            <div className="header-top">
+                <div style={{width: 50}}></div> {/* Spacer */}
+                <h1>Magic Color Tap</h1>
+                <div className="star-badge" title="Your collected stars">
+                    <svg className="star-icon" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    {stars}
+                </div>
+            </div>
+            
             <p className="subtitle">Type what you want to Color</p>
             
             <div className="prompt-container">
@@ -238,13 +313,14 @@ function HomeScreen({ prompt, setPrompt, onGenerate, onPreset }) {
     );
 }
 
-function CanvasScreen({ imageObj, onBack }) {
+function CanvasScreen({ imageObj, onBack, onComplete }) {
     const canvasRef = useRef(null);
     const [ctx, setCtx] = useState(null);
     const [displayData, setDisplayData] = useState(null); // Uint8ClampedArray
     const [referenceData, setReferenceData] = useState(null); // Uint8ClampedArray (Original)
     const [dims, setDims] = useState({ w: 0, h: 0 });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [completed, setCompleted] = useState(false);
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -296,7 +372,7 @@ function CanvasScreen({ imageObj, onBack }) {
     }, [canvasRef, imageObj]);
 
     const handleTap = (e) => {
-        if (!ctx || !displayData || !referenceData) return;
+        if (!ctx || !displayData || !referenceData || completed) return;
 
         const rect = canvasRef.current.getBoundingClientRect();
         
@@ -312,6 +388,23 @@ function CanvasScreen({ imageObj, onBack }) {
         // Put back to canvas
         const newImageData = new ImageData(displayData, dims.w, dims.h);
         ctx.putImageData(newImageData, 0, 0);
+
+        // Check completion
+        // Use a small timeout to not block the UI update
+        requestAnimationFrame(() => {
+            const progress = checkCompletion(displayData, referenceData);
+            if (progress > 0.98) { // 98% threshold to account for tiny missed pixels
+                setCompleted(true);
+                onComplete();
+                if (window.confetti) {
+                    window.confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                }
+            }
+        });
     };
 
     const handleSubmit = async () => {
@@ -344,11 +437,27 @@ function CanvasScreen({ imageObj, onBack }) {
                     ref={canvasRef}
                     onPointerDown={handleTap}
                 />
+                
+                {completed && (
+                    <div className="congrats-overlay">
+                        <div className="congrats-content">
+                            <span className="big-star">⭐</span>
+                            <h2>Amazing!</h2>
+                            <p>You earned a Star!</p>
+                            <button className="btn btn-primary" onClick={handleSubmit}>
+                                {isSubmitting ? 'Saving...' : 'Save to Gallery'}
+                            </button>
+                            <button className="btn btn-secondary" style={{marginTop:'10px', background:'transparent', color:'#444', boxShadow:'none'}} onClick={onBack}>
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
             
             <div className="controls">
                 <button className="btn btn-secondary" onClick={onBack}>Back</button>
-                <button className="btn btn-primary" onClick={handleSubmit} disabled={isSubmitting}>
+                <button className="btn btn-primary" onClick={handleSubmit} disabled={isSubmitting || completed}>
                     {isSubmitting ? 'Saving...' : 'Save Art'}
                 </button>
             </div>

@@ -152,6 +152,89 @@ canvas {
     gap: 10px;
     justify-content: center;
     padding-bottom: 20px;
+    z-index: 10;
+}
+
+/* Header & Stars */
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.star-badge {
+    background: #FFD700;
+    color: #B35500;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    font-size: 1.1rem;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.star-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+/* Congrats Overlay */
+.congrats-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(5px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    animation: fadeIn 0.5s ease;
+}
+
+.congrats-content {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    border: 4px solid var(--secondary);
+    max-width: 90%;
+    transform-origin: center;
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.big-star {
+    font-size: 5rem;
+    color: #FFD700;
+    text-shadow: 0 5px 0 #d4af37;
+    margin-bottom: 10px;
+    display: block;
+    animation: spin-bounce 1s ease infinite alternate;
+}
+
+@keyframes spin-bounce {
+    from { transform: scale(1) rotate(-10deg); }
+    to { transform: scale(1.1) rotate(10deg); }
+}
+
+@keyframes popIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .btn {
