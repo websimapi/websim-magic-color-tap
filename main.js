@@ -321,6 +321,17 @@ function CanvasScreen({ imageObj, onBack, onComplete }) {
     const [dims, setDims] = useState({ w: 0, h: 0 });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [completed, setCompleted] = useState(false);
+    const [showOverlay, setShowOverlay] = useState(false);
+
+    // Delay the overlay so the user can enjoy the confetti on the finished artwork first
+    useEffect(() => {
+        if (completed) {
+            const timer = setTimeout(() => {
+                setShowOverlay(true);
+            }, 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [completed]);
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -438,7 +449,7 @@ function CanvasScreen({ imageObj, onBack, onComplete }) {
                     onPointerDown={handleTap}
                 />
                 
-                {completed && (
+                {showOverlay && (
                     <div className="congrats-overlay">
                         <div className="congrats-content">
                             <span className="big-star">⭐</span>
