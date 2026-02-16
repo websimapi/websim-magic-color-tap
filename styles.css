@@ -142,6 +142,7 @@ canvas {
     object-fit: contain;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     background: white;
+    touch-action: none; /* Prevents scrolling when tapping canvas */
 }
 
 /* Controls */

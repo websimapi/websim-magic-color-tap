@@ -1,69 +1,76 @@
 // Utils
 const room = new WebsimSocket();
 
-// Standard BFS Flood Fill
+// Optimized Flood Fill with Visited Tracking and Loop Prevention
 function floodFill(displayData, referenceData, startX, startY, width, height) {
-    const stack = [[startX, startY]];
-    const pixelPos = (startY * width + startX) * 4;
+    const startIdx = (startY * width + startX) * 4;
     
-    // Check if we are clicking on a black line (boundary)
-    // If the reference pixel is black/dark, we do nothing.
-    // However, our algorithm clears non-black pixels to white. 
-    // So on displayData, we want to fill WHITE pixels.
-    
-    // Get target color from Reference
-    const tr = referenceData[pixelPos];
-    const tg = referenceData[pixelPos + 1];
-    const tb = referenceData[pixelPos + 2];
-    
-    // Get clicked color from Display
-    const dr = displayData[pixelPos];
-    const dg = displayData[pixelPos + 1];
-    const db = displayData[pixelPos + 2];
+    // Colors
+    const startR = displayData[startIdx];
+    const startG = displayData[startIdx + 1];
+    const startB = displayData[startIdx + 2];
 
-    // If already colored (close to reference), don't refill
-    if (Math.abs(dr - tr) < 10 && Math.abs(dg - tg) < 10 && Math.abs(db - tb) < 10) return;
+    const targetR = referenceData[startIdx];
+    const targetG = referenceData[startIdx + 1];
+    const targetB = referenceData[startIdx + 2];
 
-    // We only fill if the clicked pixel is "Empty" (White-ish in our display canvas)
-    // Actually, we should just fill whatever bounded region we clicked, as long as it's not a black line.
+    // 1. Boundary Check: If clicked pixel is a dark line, stop.
+    if (startR < 50 && startG < 50 && startB < 50) return;
+
+    // 2. Optimization: If already colored (matches reference), stop.
+    if (Math.abs(startR - targetR) < 15 && 
+        Math.abs(startG - targetG) < 15 && 
+        Math.abs(startB - targetB) < 15) return;
+
+    // 3. Setup Loop
+    // Uint8Array is efficient for large canvases (visited map)
+    const visited = new Uint8Array(width * height);
+    const stack = [startIdx];
+    visited[startIdx / 4] = 1;
     
-    // Check if clicked pixel is a line (Dark)
-    if (dr < 50 && dg < 50 && db < 50) return; // Clicked a line
-    
-    const startR = dr;
-    const startG = dg;
-    const startB = db;
-
-    // Helper to check if pixel matches the starting color (the empty color)
-    const match = (pos) => {
-        const r = displayData[pos];
-        const g = displayData[pos + 1];
-        const b = displayData[pos + 2];
-        return Math.abs(r - startR) < 30 && Math.abs(g - startG) < 30 && Math.abs(b - startB) < 30;
-    };
-
-    // Helper to color a pixel
-    const colorPixel = (pos, x, y) => {
-        const refPos = (y * width + x) * 4;
-        displayData[pos] = referenceData[refPos];
-        displayData[pos + 1] = referenceData[refPos + 1];
-        displayData[pos + 2] = referenceData[refPos + 2];
-        displayData[pos + 3] = 255;
-    };
+    const maxIdx = width * height * 4;
+    const tolerance = 40; 
 
     while (stack.length) {
-        const [x, y] = stack.pop();
-        const pos = (y * width + x) * 4;
-
-        if (x < 0 || x >= width || y < 0 || y >= height) continue;
+        const idx = stack.pop();
         
-        if (match(pos)) {
-            colorPixel(pos, x, y);
+        // Reveal Color
+        displayData[idx] = referenceData[idx];
+        displayData[idx + 1] = referenceData[idx + 1];
+        displayData[idx + 2] = referenceData[idx + 2];
+        displayData[idx + 3] = 255; 
 
-            stack.push([x + 1, y]);
-            stack.push([x - 1, y]);
-            stack.push([x, y + 1]);
-            stack.push([x, y - 1]);
+        // Neighbors
+        const pxIndex = idx / 4;
+        const cx = pxIndex % width; 
+        
+        const offsets = [-4, 4, -width * 4, width * 4];
+
+        for (let i = 0; i < 4; i++) {
+            const offset = offsets[i];
+            const nIdx = idx + offset;
+            
+            if (nIdx < 0 || nIdx >= maxIdx) continue;
+            
+            // Wrap checks
+            if (offset === -4 && cx === 0) continue;
+            if (offset === 4 && cx === width - 1) continue;
+            
+            const nPxIndex = nIdx / 4;
+            if (visited[nPxIndex]) continue;
+            
+            // Match against original Empty color (flood region)
+            const nr = displayData[nIdx];
+            const ng = displayData[nIdx + 1];
+            const nb = displayData[nIdx + 2];
+            
+            if (Math.abs(nr - startR) < tolerance && 
+                Math.abs(ng - startG) < tolerance && 
+                Math.abs(nb - startB) < tolerance) {
+                
+                visited[nPxIndex] = 1;
+                stack.push(nIdx);
+            }
         }
     }
 }
@@ -293,21 +300,13 @@ function CanvasScreen({ imageObj, onBack }) {
 
         const rect = canvasRef.current.getBoundingClientRect();
         
-        // Handle both touch and mouse
-        let clientX = e.clientX;
-        let clientY = e.clientY;
-        if (e.changedTouches && e.changedTouches.length > 0) {
-            clientX = e.changedTouches[0].clientX;
-            clientY = e.changedTouches[0].clientY;
-        }
-
-        const x = Math.floor((clientX - rect.left) * (dims.w / rect.width));
-        const y = Math.floor((clientY - rect.top) * (dims.h / rect.height));
+        // Pointer events provide unified coordinates
+        const x = Math.floor((e.clientX - rect.left) * (dims.w / rect.width));
+        const y = Math.floor((e.clientY - rect.top) * (dims.h / rect.height));
 
         if (x < 0 || y < 0 || x >= dims.w || y >= dims.h) return;
 
         // Perform Logic
-        // We modify the displayData array directly
         floodFill(displayData, referenceData, x, y, dims.w, dims.h);
         
         // Put back to canvas
@@ -343,8 +342,7 @@ function CanvasScreen({ imageObj, onBack }) {
             <div className="canvas-container">
                 <canvas 
                     ref={canvasRef}
-                    onMouseDown={handleTap}
-                    onTouchStart={handleTap}
+                    onPointerDown={handleTap}
                 />
             </div>
             
