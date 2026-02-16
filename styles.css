@@ -65,8 +65,14 @@ p.subtitle {
     margin-bottom: 20px;
 }
 
-.magic-input {
+.input-wrapper {
+    display: flex;
+    gap: 10px;
     width: 100%;
+}
+
+.magic-input {
+    flex: 1;
     padding: 15px;
     border: 3px solid var(--dark);
     border-radius: 12px;
@@ -81,7 +87,24 @@ p.subtitle {
     box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.2);
 }
 
-/* Presets Grid */
+.go-btn {
+    padding: 0 20px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #d64545;
+}
+
+.go-btn:active {
+    transform: translateY(4px);
+    box-shadow: none;
+}
+
+/* Presets Carousel */
 .presets-label {
     font-weight: bold;
     margin-bottom: 10px;
@@ -90,13 +113,43 @@ p.subtitle {
     letter-spacing: 1px;
 }
 
+.carousel-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+}
+
+.nav-btn {
+    background: rgba(255,255,255,0.8);
+    border: none;
+    font-size: 2rem;
+    color: var(--dark);
+    cursor: pointer;
+    width: 40px;
+    height: 100%;
+    z-index: 2;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-btn:disabled {
+    opacity: 0.2;
+    cursor: default;
+}
+
 .presets-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
+    grid-template-rows: repeat(2, 1fr);
+    gap: 8px;
+    flex: 1;
     width: 100%;
-    max-width: 400px;
-    margin-bottom: 20px;
+    transition: opacity 0.3s;
 }
 
 .preset-thumb {
@@ -109,6 +162,8 @@ p.subtitle {
     overflow: hidden;
     position: relative;
     transition: transform 0.1s;
+    display: flex;
+    flex-direction: column;
 }
 
 .preset-thumb:active {
@@ -119,6 +174,47 @@ p.subtitle {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.preset-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-size: 0.5rem;
+    padding: 2px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Pagination Dots */
+.pagination-dots {
+    display: flex;
+    gap: 5px;
+    margin: 10px 0 20px 0;
+    align-items: center;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    background: #ccc;
+    border-radius: 50%;
+    transition: background 0.3s;
+}
+
+.dot.active {
+    background: var(--primary);
+    transform: scale(1.2);
+}
+
+.dot-more {
+    color: #ccc;
+    font-size: 12px;
 }
 
 /* Canvas Area */
@@ -334,8 +430,20 @@ p.subtitle {
 
 /* Mobile optimizations */
 @media (max-width: 600px) {
+    .carousel-container {
+        padding: 0 5px;
+    }
+
     .presets-grid {
         grid-template-columns: repeat(5, 1fr);
+        /* Ensure fits on narrow screens */
+        gap: 4px;
+    }
+
+    .nav-btn {
+        width: 30px;
+        font-size: 1.5rem;
+        padding: 0;
     }
     
     h1 {

@@ -122,18 +122,44 @@ function checkCompletion(displayData, referenceData) {
 // React Components
 const { useState, useEffect, useRef, useCallback } = React;
 
-const PRESETS = [
-    { id: 1, src: 'preset_pizza.png', label: 'Pizza' },
-    { id: 2, src: 'preset_cat.png', label: 'Cat' },
-    { id: 3, src: 'preset_flower.png', label: 'Flower' },
-    { id: 4, src: 'preset_car.png', label: 'Car' },
-    { id: 5, src: 'preset_house.png', label: 'House' },
-    { id: 6, src: 'preset_robot.png', label: 'Robot' },
-    { id: 7, src: 'preset_unicorn.png', label: 'Unicorn' },
-    { id: 8, src: 'preset_cupcake.png', label: 'Cupcake' },
-    { id: 9, src: 'preset_butterfly.png', label: 'Butterfly' },
-    { id: 10, src: 'preset_dino.png', label: 'Dino' },
-];
+// Helper to generate 100 presets using available assets
+const generatePresets = () => {
+    const baseAssets = [
+        { src: 'preset_pizza.png', label: 'Pizza', tags: ['food', 'lunch', 'yummy'] },
+        { src: 'preset_cat.png', label: 'Cat', tags: ['animal', 'pet', 'cute', 'kitten'] },
+        { src: 'preset_flower.png', label: 'Flower', tags: ['nature', 'plant', 'garden'] },
+        { src: 'preset_car.png', label: 'Car', tags: ['vehicle', 'transport', 'fast'] },
+        { src: 'preset_house.png', label: 'House', tags: ['building', 'home', 'cottage'] },
+        { src: 'preset_robot.png', label: 'Robot', tags: ['tech', 'scifi', 'toy'] },
+        { src: 'preset_unicorn.png', label: 'Unicorn', tags: ['fantasy', 'magic', 'horse'] },
+        { src: 'preset_cupcake.png', label: 'Cupcake', tags: ['food', 'dessert', 'sweet'] },
+        { src: 'preset_butterfly.png', label: 'Butterfly', tags: ['insect', 'nature', 'fly'] },
+        { src: 'preset_dino.png', label: 'Dino', tags: ['animal', 'prehistoric', 'rex'] },
+    ];
+
+    const adjectives = ['Super', 'Happy', 'Magic', 'Little', 'Big', 'Funny', 'Cool', 'Wild', 'Space', 'Rainbow'];
+    let list = [];
+    let id = 1;
+
+    // Add base items first
+    baseAssets.forEach(a => list.push({ ...a, id: id++, label: a.label }));
+
+    // Generate variations to reach ~100
+    for (let i = 0; i < 9; i++) {
+        baseAssets.forEach(asset => {
+            list.push({
+                id: id++,
+                src: asset.src,
+                label: `${adjectives[i]} ${asset.label}`,
+                tags: asset.tags
+            });
+        });
+    }
+    
+    return list;
+};
+
+const PRESETS = generatePresets();
 
 function Gallery() {
     // We use a collection called 'submissions_v2' to simulate our "1 row" concept but make it functional.
@@ -186,17 +212,7 @@ function App() {
         }).catch(e => console.log('Stat sync skip', e));
     };
     
-    // Debounce Logic for typing
-    useEffect(() => {
-        if (!prompt || screen !== 'home' || loading) return;
-        
-        const timer = setTimeout(() => {
-            handleGenerate(prompt);
-        }, 5000); // 5 seconds auto-submit
-
-        return () => clearTimeout(timer);
-    }, [prompt, screen, loading]);
-
+    // Handle Generation with Search Fallback
     const handleGenerate = async (text) => {
         if (!text.trim() || loading) return;
         setLoading(true);
@@ -208,9 +224,13 @@ function App() {
             });
             startColoring(result.url, text);
         } catch (e) {
-            console.error(e);
-            alert("AI generation failed. Try again.");
+            console.error("AI Generation failed, falling back to search", e);
             setLoading(false);
+            // Fallback: This is handled by the component state in HomeScreen mostly, 
+            // but we can return a signal or just let the user know.
+            // Since we lifted the search state to HomeScreen, we'll handle the UI update there.
+            // We throw slightly to let the caller know to switch to search mode if needed.
+            throw new Error("SEARCH_FALLBACK");
         }
     };
 
@@ -267,16 +287,78 @@ function App() {
 }
 
 function HomeScreen({ prompt, setPrompt, onGenerate, onPreset, stars }) {
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            onGenerate(prompt);
+    const [filteredPresets, setFilteredPresets] = useState(PRESETS);
+    const [page, setPage] = useState(0);
+    const [searchMode, setSearchMode] = useState(false);
+    
+    const PAGE_SIZE = 10;
+    const totalPages = Math.ceil(filteredPresets.length / PAGE_SIZE);
+
+    // Reset filtering when prompt is cleared
+    useEffect(() => {
+        if (prompt === '') {
+            setFilteredPresets(PRESETS);
+            setSearchMode(false);
+            setPage(0);
+        }
+    }, [prompt]);
+
+    const performSearch = () => {
+        const lower = prompt.toLowerCase();
+        const results = PRESETS.filter(p => 
+            p.label.toLowerCase().includes(lower) || 
+            (p.tags && p.tags.some(t => t.toLowerCase().includes(lower)))
+        );
+        setFilteredPresets(results);
+        setPage(0);
+        setSearchMode(true);
+    };
+
+    const handleAction = async () => {
+        if (!prompt.trim()) return;
+        
+        try {
+            await onGenerate(prompt);
+        } catch (error) {
+            if (error.message === "SEARCH_FALLBACK") {
+                performSearch();
+            }
         }
     };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleAction();
+        }
+    };
+
+    // Pagination
+    const nextPage = () => setPage(p => Math.min(p + 1, totalPages - 1));
+    const prevPage = () => setPage(p => Math.max(p - 1, 0));
+
+    // Swipe Logic
+    const touchStartX = useRef(null);
+    const handleTouchStart = (e) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+    const handleTouchEnd = (e) => {
+        if (!touchStartX.current) return;
+        const touchEndX = e.changedTouches[0].clientX;
+        const diff = touchStartX.current - touchEndX;
+
+        if (Math.abs(diff) > 50) { // Threshold
+            if (diff > 0) nextPage();
+            else prevPage();
+        }
+        touchStartX.current = null;
+    };
+
+    const currentItems = filteredPresets.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
     return (
         <div className="screen center-content">
             <div className="header-top">
-                <div style={{width: 50}}></div> {/* Spacer */}
+                <div style={{width: 50}}></div>
                 <h1>Magic Color Tap</h1>
                 <div className="star-badge" title="Your collected stars">
                     <svg className="star-icon" viewBox="0 0 24 24">
@@ -289,23 +371,62 @@ function HomeScreen({ prompt, setPrompt, onGenerate, onPreset, stars }) {
             <p className="subtitle">Type what you want to Color</p>
             
             <div className="prompt-container">
-                <input 
-                    className="magic-input" 
-                    placeholder="e.g. A flying turtle..." 
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    autoFocus
-                />
+                <div className="input-wrapper">
+                    <input 
+                        className="magic-input" 
+                        placeholder="e.g. A flying turtle..." 
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        autoFocus
+                    />
+                    <button className="go-btn" onClick={handleAction}>
+                        GO
+                    </button>
+                </div>
             </div>
 
-            <p className="presets-label">Or pick a preset</p>
-            <div className="presets-grid">
-                {PRESETS.map(p => (
-                    <div key={p.id} className="preset-thumb" onClick={() => onPreset(p)}>
-                        <img src={p.src} alt={p.label} />
-                    </div>
+            <p className="presets-label">
+                {searchMode ? `Found ${filteredPresets.length} matching presets` : 'Pick a preset'}
+            </p>
+            
+            <div className="carousel-container">
+                <button 
+                    className="nav-btn prev" 
+                    onClick={prevPage} 
+                    disabled={page === 0}
+                >‹</button>
+                
+                <div 
+                    className="presets-grid"
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    {currentItems.map(p => (
+                        <div key={p.id} className="preset-thumb" onClick={() => onPreset(p)}>
+                            <img src={p.src} alt={p.label} />
+                            <div className="preset-label">{p.label}</div>
+                        </div>
+                    ))}
+                    {currentItems.length === 0 && (
+                        <div style={{gridColumn: '1/-1', textAlign: 'center', padding: 20}}>
+                            No presets found. Try a different search!
+                        </div>
+                    )}
+                </div>
+
+                <button 
+                    className="nav-btn next" 
+                    onClick={nextPage} 
+                    disabled={page >= totalPages - 1}
+                >›</button>
+            </div>
+            
+            <div className="pagination-dots">
+                {Array.from({length: Math.min(totalPages, 10)}).map((_, i) => (
+                     <span key={i} className={`dot ${i === page ? 'active' : ''}`} />
                 ))}
+                {totalPages > 10 && <span className="dot-more">...</span>}
             </div>
 
             <Gallery />
