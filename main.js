@@ -221,6 +221,17 @@ const generatePresets = () => {
         { src: 'preset_camera.png', label: 'Camera', tags: ['object', 'photo', 'picture'] },
         { src: 'preset_ghost.png', label: 'Ghost', tags: ['fantasy', 'spooky', 'halloween'] },
         { src: 'preset_star.png', label: 'Star', tags: ['space', 'sky', 'shine'] },
+        // Set 6 (51-60)
+        { src: 'preset_bee.png', label: 'Bee', tags: ['insect', 'nature', 'honey'] },
+        { src: 'preset_ladybug.png', label: 'Ladybug', tags: ['insect', 'nature', 'red'] },
+        { src: 'preset_snail.png', label: 'Snail', tags: ['animal', 'garden', 'shell'] },
+        { src: 'preset_dolphin.png', label: 'Dolphin', tags: ['animal', 'ocean', 'swim'] },
+        { src: 'preset_crab.png', label: 'Crab', tags: ['animal', 'beach', 'ocean'] },
+        { src: 'preset_whale.png', label: 'Whale', tags: ['animal', 'ocean', 'big'] },
+        { src: 'preset_fox.png', label: 'Fox', tags: ['animal', 'forest', 'orange'] },
+        { src: 'preset_koala.png', label: 'Koala', tags: ['animal', 'australia', 'cute'] },
+        { src: 'preset_lion.png', label: 'Lion', tags: ['animal', 'safari', 'king'] },
+        { src: 'preset_tiger.png', label: 'Tiger', tags: ['animal', 'safari', 'stripes'] },
     ];
 
     const adjectives = ['Super', 'Happy', 'Magic', 'Little', 'Big', 'Funny', 'Cool', 'Wild', 'Space', 'Rainbow'];
