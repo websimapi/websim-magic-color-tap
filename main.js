@@ -210,6 +210,17 @@ const generatePresets = () => {
         { src: 'preset_planet.png', label: 'Planet', tags: ['space', 'universe', 'stars'] },
         { src: 'preset_anchor.png', label: 'Anchor', tags: ['ocean', 'boat', 'sea'] },
         { src: 'preset_key.png', label: 'Key', tags: ['object', 'mystery', 'lock'] },
+        // Set 5 (41-50)
+        { src: 'preset_apple.png', label: 'Apple', tags: ['food', 'fruit', 'red'] },
+        { src: 'preset_duck.png', label: 'Duck', tags: ['animal', 'bird', 'water'] },
+        { src: 'preset_hat.png', label: 'Hat', tags: ['clothing', 'magic', 'wear'] },
+        { src: 'preset_moon.png', label: 'Moon', tags: ['space', 'night', 'sleep'] },
+        { src: 'preset_shoe.png', label: 'Shoe', tags: ['clothing', 'walk', 'run'] },
+        { src: 'preset_bell.png', label: 'Bell', tags: ['object', 'music', 'sound'] },
+        { src: 'preset_book.png', label: 'Book', tags: ['object', 'read', 'school'] },
+        { src: 'preset_camera.png', label: 'Camera', tags: ['object', 'photo', 'picture'] },
+        { src: 'preset_ghost.png', label: 'Ghost', tags: ['fantasy', 'spooky', 'halloween'] },
+        { src: 'preset_star.png', label: 'Star', tags: ['space', 'sky', 'shine'] },
     ];
 
     const adjectives = ['Super', 'Happy', 'Magic', 'Little', 'Big', 'Funny', 'Cool', 'Wild', 'Space', 'Rainbow'];
