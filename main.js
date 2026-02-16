@@ -188,6 +188,17 @@ const generatePresets = () => {
         { src: 'preset_bird.png', label: 'Bird', tags: ['animal', 'fly', 'sky'] },
         { src: 'preset_tree.png', label: 'Tree', tags: ['nature', 'plant', 'fruit'] },
         { src: 'preset_plane.png', label: 'Plane', tags: ['vehicle', 'fly', 'transport'] },
+        // Set 3 (21-30)
+        { src: 'preset_balloon.png', label: 'Balloon', tags: ['sky', 'fly', 'travel'] },
+        { src: 'preset_bear.png', label: 'Bear', tags: ['animal', 'cute', 'forest'] },
+        { src: 'preset_train.png', label: 'Train', tags: ['vehicle', 'transport', 'toy'] },
+        { src: 'preset_rainbow.png', label: 'Rainbow', tags: ['nature', 'sky', 'weather'] },
+        { src: 'preset_guitar.png', label: 'Guitar', tags: ['music', 'instrument', 'song'] },
+        { src: 'preset_octopus.png', label: 'Octopus', tags: ['animal', 'ocean', 'water'] },
+        { src: 'preset_mushroom.png', label: 'Mushroom', tags: ['nature', 'plant', 'forest'] },
+        { src: 'preset_snowman.png', label: 'Snowman', tags: ['winter', 'snow', 'cold'] },
+        { src: 'preset_boat.png', label: 'Boat', tags: ['vehicle', 'water', 'ocean'] },
+        { src: 'preset_burger.png', label: 'Burger', tags: ['food', 'lunch', 'yummy'] },
     ];
 
     const adjectives = ['Super', 'Happy', 'Magic', 'Little', 'Big', 'Funny', 'Cool', 'Wild', 'Space', 'Rainbow'];
