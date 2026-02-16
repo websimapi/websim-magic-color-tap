@@ -232,6 +232,17 @@ const generatePresets = () => {
         { src: 'preset_koala.png', label: 'Koala', tags: ['animal', 'australia', 'cute'] },
         { src: 'preset_lion.png', label: 'Lion', tags: ['animal', 'safari', 'king'] },
         { src: 'preset_tiger.png', label: 'Tiger', tags: ['animal', 'safari', 'stripes'] },
+        // Set 7 (61-70)
+        { src: 'preset_penguin.png', label: 'Penguin', tags: ['animal', 'arctic', 'cute'] },
+        { src: 'preset_giraffe.png', label: 'Giraffe', tags: ['animal', 'safari', 'tall'] },
+        { src: 'preset_elephant.png', label: 'Elephant', tags: ['animal', 'safari', 'big'] },
+        { src: 'preset_hedgehog.png', label: 'Hedgehog', tags: ['animal', 'forest', 'spiky'] },
+        { src: 'preset_seahorse.png', label: 'Seahorse', tags: ['animal', 'ocean', 'swim'] },
+        { src: 'preset_parrot.png', label: 'Parrot', tags: ['animal', 'bird', 'color'] },
+        { src: 'preset_zebra.png', label: 'Zebra', tags: ['animal', 'safari', 'stripes'] },
+        { src: 'preset_panda.png', label: 'Panda', tags: ['animal', 'cute', 'china'] },
+        { src: 'preset_frog.png', label: 'Frog', tags: ['animal', 'pond', 'jump'] },
+        { src: 'preset_squirrel.png', label: 'Squirrel', tags: ['animal', 'forest', 'nut'] },
     ];
 
     const adjectives = ['Super', 'Happy', 'Magic', 'Little', 'Big', 'Funny', 'Cool', 'Wild', 'Space', 'Rainbow'];
