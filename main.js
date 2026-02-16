@@ -199,6 +199,17 @@ const generatePresets = () => {
         { src: 'preset_snowman.png', label: 'Snowman', tags: ['winter', 'snow', 'cold'] },
         { src: 'preset_boat.png', label: 'Boat', tags: ['vehicle', 'water', 'ocean'] },
         { src: 'preset_burger.png', label: 'Burger', tags: ['food', 'lunch', 'yummy'] },
+        // Set 4 (31-40)
+        { src: 'preset_basketball.png', label: 'Basketball', tags: ['sport', 'play', 'ball'] },
+        { src: 'preset_ufo.png', label: 'UFO', tags: ['space', 'scifi', 'alien'] },
+        { src: 'preset_owl.png', label: 'Owl', tags: ['animal', 'bird', 'night'] },
+        { src: 'preset_crown.png', label: 'Crown', tags: ['fantasy', 'royal', 'king'] },
+        { src: 'preset_diamond.png', label: 'Diamond', tags: ['treasure', 'gem', 'shiny'] },
+        { src: 'preset_cake.png', label: 'Cake', tags: ['food', 'dessert', 'party'] },
+        { src: 'preset_robot_dog.png', label: 'Robo Dog', tags: ['tech', 'animal', 'scifi'] },
+        { src: 'preset_planet.png', label: 'Planet', tags: ['space', 'universe', 'stars'] },
+        { src: 'preset_anchor.png', label: 'Anchor', tags: ['ocean', 'boat', 'sea'] },
+        { src: 'preset_key.png', label: 'Key', tags: ['object', 'mystery', 'lock'] },
     ];
 
     const adjectives = ['Super', 'Happy', 'Magic', 'Little', 'Big', 'Funny', 'Cool', 'Wild', 'Space', 'Rainbow'];
