@@ -188,17 +188,17 @@ function App() {
     
     // Debounce Logic for typing
     useEffect(() => {
-        if (!prompt || screen !== 'home') return;
+        if (!prompt || screen !== 'home' || loading) return;
         
         const timer = setTimeout(() => {
             handleGenerate(prompt);
         }, 5000); // 5 seconds auto-submit
 
         return () => clearTimeout(timer);
-    }, [prompt, screen]);
+    }, [prompt, screen, loading]);
 
     const handleGenerate = async (text) => {
-        if (!text.trim()) return;
+        if (!text.trim() || loading) return;
         setLoading(true);
         try {
             // "Solid Black Lines (Has color though HD)"

@@ -136,7 +136,7 @@ p.subtitle {
     box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
 }
 
-canvas {
+.canvas-container canvas {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
