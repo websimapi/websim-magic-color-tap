@@ -243,6 +243,17 @@ const generatePresets = () => {
         { src: 'preset_panda.png', label: 'Panda', tags: ['animal', 'cute', 'china'] },
         { src: 'preset_frog.png', label: 'Frog', tags: ['animal', 'pond', 'jump'] },
         { src: 'preset_squirrel.png', label: 'Squirrel', tags: ['animal', 'forest', 'nut'] },
+        // Set 8 (71-80)
+        { src: 'preset_cow.png', label: 'Cow', tags: ['animal', 'farm', 'milk'] },
+        { src: 'preset_pig.png', label: 'Pig', tags: ['animal', 'farm', 'pink'] },
+        { src: 'preset_sheep.png', label: 'Sheep', tags: ['animal', 'farm', 'wool'] },
+        { src: 'preset_chicken.png', label: 'Chicken', tags: ['animal', 'farm', 'egg'] },
+        { src: 'preset_monkey.png', label: 'Monkey', tags: ['animal', 'jungle', 'climb'] },
+        { src: 'preset_snake.png', label: 'Snake', tags: ['animal', 'wild', 'reptile'] },
+        { src: 'preset_camel.png', label: 'Camel', tags: ['animal', 'desert', 'hump'] },
+        { src: 'preset_kangaroo.png', label: 'Kangaroo', tags: ['animal', 'australia', 'jump'] },
+        { src: 'preset_bat.png', label: 'Bat', tags: ['animal', 'night', 'fly'] },
+        { src: 'preset_shark.png', label: 'Shark', tags: ['animal', 'ocean', 'swim'] },
     ];
 
     const adjectives = ['Super', 'Happy', 'Magic', 'Little', 'Big', 'Funny', 'Cool', 'Wild', 'Space', 'Rainbow'];
