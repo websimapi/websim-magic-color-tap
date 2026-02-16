@@ -1,122 +1,164 @@
 // Utils
 const room = new WebsimSocket();
 
-// Optimized Flood Fill with Visited Tracking and Loop Prevention
-function floodFill(displayData, referenceData, startX, startY, width, height) {
-    const startIdx = (startY * width + startX) * 4;
-    const maxIdx = width * height * 4;
+// Region Analysis & Helper Functions
 
-    // Safety bounds check
-    if (startIdx < 0 || startIdx >= maxIdx) return;
+// 1. Analyze the image to find all distinct fillable regions and group them into a palette
+function analyzeImage(ctx, width, height) {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    const totalPixels = width * height;
     
-    // Colors
-    const startR = displayData[startIdx];
-    const startG = displayData[startIdx + 1];
-    const startB = displayData[startIdx + 2];
-
-    const targetR = referenceData[startIdx];
-    const targetG = referenceData[startIdx + 1];
-    const targetB = referenceData[startIdx + 2];
-
-    // 1. Boundary Check: If clicked pixel is a dark line, stop.
-    if (startR < 50 && startG < 50 && startB < 50) return;
-
-    // 2. Optimization: If already colored (matches reference), stop.
-    if (Math.abs(startR - targetR) < 15 && 
-        Math.abs(startG - targetG) < 15 && 
-        Math.abs(startB - targetB) < 15) return;
-
-    // 3. Setup Loop
-    // Uint8Array is efficient for large canvases (visited map)
-    const visited = new Uint8Array(width * height);
-    const stack = [startIdx];
-    visited[startIdx / 4] = 1;
+    // Visited array: 0 = unvisited, 1 = visited
+    const visited = new Uint8Array(totalPixels);
+    // Region Map: pixelIndex -> regionID (or -1 for lines)
+    const regionMap = new Int32Array(totalPixels).fill(-1);
     
-    const tolerance = 40; 
-    let iterations = 0;
-    const MAX_ITERATIONS = 2000000; // Prevent infinite loop freeze
+    let regions = [];
+    let regionIdCounter = 0;
 
-    while (stack.length) {
-        iterations++;
-        if (iterations > MAX_ITERATIONS) {
-            console.warn("Flood fill hit safety limit");
-            break;
-        }
+    // Iterate all pixels to find connected components
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const idx = (y * width + x);
+            const dataIdx = idx * 4;
+            
+            if (visited[idx]) continue;
+            
+            // Check if Line (Black)
+            const r = data[dataIdx];
+            const g = data[dataIdx+1];
+            const b = data[dataIdx+2];
+            const isLine = (r < 50 && g < 50 && b < 50);
 
-        const idx = stack.pop();
-        
-        // Reveal Color
-        displayData[idx] = referenceData[idx];
-        displayData[idx + 1] = referenceData[idx + 1];
-        displayData[idx + 2] = referenceData[idx + 2];
-        displayData[idx + 3] = 255; 
+            if (isLine) {
+                visited[idx] = 1;
+                continue;
+            }
 
-        // Neighbors
-        const pxIndex = idx / 4;
-        const cx = pxIndex % width; 
-        
-        const offsets = [-4, 4, -width * 4, width * 4];
+            // Found a new region start
+            const region = {
+                id: regionIdCounter++,
+                pixels: [], // List of pixel INDICES (divide by 4)
+                color: [0, 0, 0], // To be averaged
+                filled: false,
+                paletteId: -1
+            };
 
-        for (let i = 0; i < 4; i++) {
-            const offset = offsets[i];
-            const nIdx = idx + offset;
+            // BFS Flood Fill to find extent of region
+            const queue = [idx];
+            visited[idx] = 1;
+            regionMap[idx] = region.id;
             
-            if (nIdx < 0 || nIdx >= maxIdx) continue;
+            let sumR = 0, sumG = 0, sumB = 0;
             
-            // Wrap checks
-            if (offset === -4 && cx === 0) continue;
-            if (offset === 4 && cx === width - 1) continue;
-            
-            const nPxIndex = nIdx / 4;
-            if (visited[nPxIndex]) continue;
-            
-            // Match against original Empty color (flood region)
-            const nr = displayData[nIdx];
-            const ng = displayData[nIdx + 1];
-            const nb = displayData[nIdx + 2];
-            
-            if (Math.abs(nr - startR) < tolerance && 
-                Math.abs(ng - startG) < tolerance && 
-                Math.abs(nb - startB) < tolerance) {
+            while(queue.length) {
+                const currIdx = queue.pop();
+                region.pixels.push(currIdx);
                 
-                visited[nPxIndex] = 1;
-                stack.push(nIdx);
+                const cBase = currIdx * 4;
+                sumR += data[cBase];
+                sumG += data[cBase+1];
+                sumB += data[cBase+2];
+
+                const cx = currIdx % width;
+                const cy = Math.floor(currIdx / width);
+
+                const neighbors = [
+                    { nx: cx + 1, ny: cy, nIdx: currIdx + 1 },
+                    { nx: cx - 1, ny: cy, nIdx: currIdx - 1 },
+                    { nx: cx, ny: cy + 1, nIdx: currIdx + width },
+                    { nx: cx, ny: cy - 1, nIdx: currIdx - width }
+                ];
+
+                for (let i = 0; i < neighbors.length; i++) {
+                    const { nx, ny, nIdx } = neighbors[i];
+                    
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height && !visited[nIdx]) {
+                        const nBase = nIdx * 4;
+                        const nr = data[nBase];
+                        const ng = data[nBase+1];
+                        const nb = data[nBase+2];
+                        
+                        // Treat dark pixels as boundaries
+                        if (nr < 50 && ng < 50 && nb < 50) {
+                            // Boundary, don't add to queue, but mark visited if you want to avoid re-checking? 
+                            // Actually, keep lines unvisited by flood fill logic usually, but here we scan everything.
+                            // If we encounter a line here, just ignore it, the main loop handles lines.
+                        } else {
+                            // Check color similarity to keep regions distinct? 
+                            // For "Cartoon" style images, usually regions are separated by black lines.
+                            // So we just fill until we hit lines.
+                            visited[nIdx] = 1;
+                            regionMap[nIdx] = region.id;
+                            queue.push(nIdx);
+                        }
+                    }
+                }
+            }
+            
+            // Average Color
+            if (region.pixels.length > 0) {
+                region.color = [
+                    Math.round(sumR / region.pixels.length),
+                    Math.round(sumG / region.pixels.length),
+                    Math.round(sumB / region.pixels.length)
+                ];
+                regions.push(region);
             }
         }
     }
-}
 
-// Check what percentage of the image is colored correctly
-function checkCompletion(displayData, referenceData) {
-    let colored = 0;
-    let total = 0;
-    const len = displayData.length;
-    
-    for (let i = 0; i < len; i += 4) {
-        // Skip pure black lines (assuming < 50 is line)
-        if (referenceData[i] < 50 && referenceData[i+1] < 50 && referenceData[i+2] < 50) {
-            continue;
+    // 2. Generate Palette (Group Regions)
+    // Simple clustering: Merge regions with very similar colors
+    let palette = [];
+    const colorThreshold = 30; // RGB distance
+
+    regions.forEach(reg => {
+        // Try to find a matching palette color
+        let match = palette.find(p => {
+            const dr = Math.abs(p.color[0] - reg.color[0]);
+            const dg = Math.abs(p.color[1] - reg.color[1]);
+            const db = Math.abs(p.color[2] - reg.color[2]);
+            return (dr + dg + db) < colorThreshold * 3;
+        });
+
+        if (match) {
+            match.regionIds.push(reg.id);
+            reg.paletteId = match.id;
+        } else {
+            const newPal = {
+                id: palette.length,
+                color: reg.color,
+                regionIds: [reg.id],
+                completed: false
+            };
+            palette.push(newPal);
+            reg.paletteId = newPal.id;
         }
-        
-        total++;
-        
-        const dr = displayData[i];
-        const dg = displayData[i+1];
-        const db = displayData[i+2];
-        
-        const rr = referenceData[i];
-        const rg = referenceData[i+1];
-        const rb = referenceData[i+2];
-        
-        // Check if display matches reference
-        // Note: Reference might be white in some spots, and display starts white.
-        // This counts as "done".
-        if (Math.abs(dr - rr) < 30 && Math.abs(dg - rg) < 30 && Math.abs(db - rb) < 30) {
-            colored++;
-        }
-    }
+    });
     
-    return total === 0 ? 1 : colored / total;
+    // Sort palette by frequency (number of regions or pixels?)
+    // Let's sort by pixel count (area) descending so big colors are first
+    palette.sort((a, b) => {
+        const areaA = a.regionIds.reduce((sum, rid) => sum + regions.find(r => r.id===rid).pixels.length, 0);
+        const areaB = b.regionIds.reduce((sum, rid) => sum + regions.find(r => r.id===rid).pixels.length, 0);
+        return areaB - areaA;
+    });
+
+    // Re-index palette IDs after sort
+    palette.forEach((p, idx) => {
+        p.originalId = p.id; // Keep track if needed, or just update regions
+        p.id = idx;
+    });
+    
+    // Update regions with new sorted palette IDs
+    regions.forEach(r => {
+        const p = palette.find(pal => pal.regionIds.includes(r.id));
+        if (p) r.paletteId = p.id;
+    });
+
+    return { regions, regionMap, palette };
 }
 
 // React Components
@@ -199,6 +241,7 @@ function Gallery() {
 
 function App() {
     const [screen, setScreen] = useState('home'); // home, canvas
+    const [gameMode, setGameMode] = useState('simple'); // 'simple' | 'numbered'
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
     const [currentImage, setCurrentImage] = useState(null); 
@@ -216,7 +259,6 @@ function App() {
         localStorage.setItem('magic_color_stars', newStars);
         
         // Attempt to save to "1 row" DB concept
-        // We use a collection 'player_stats' to represent the "second column" of data
         room.collection('player_stats').create({
             stars: newStars,
             timestamp: Date.now()
@@ -237,10 +279,6 @@ function App() {
         } catch (e) {
             console.error("AI Generation failed, falling back to search", e);
             setLoading(false);
-            // Fallback: This is handled by the component state in HomeScreen mostly, 
-            // but we can return a signal or just let the user know.
-            // Since we lifted the search state to HomeScreen, we'll handle the UI update there.
-            // We throw slightly to let the caller know to switch to search mode if needed.
             throw new Error("SEARCH_FALLBACK");
         }
     };
@@ -276,12 +314,15 @@ function App() {
                     onGenerate={handleGenerate}
                     onPreset={handlePreset}
                     stars={stars}
+                    gameMode={gameMode}
+                    setGameMode={setGameMode}
                 />
             )}
             
             {screen === 'canvas' && currentImage && (
                 <CanvasScreen 
                     imageObj={currentImage} 
+                    gameMode={gameMode}
                     onBack={handleBack}
                     onComplete={addStar}
                 />
@@ -297,7 +338,7 @@ function App() {
     );
 }
 
-function HomeScreen({ prompt, setPrompt, onGenerate, onPreset, stars }) {
+function HomeScreen({ prompt, setPrompt, onGenerate, onPreset, stars, gameMode, setGameMode }) {
     const [filteredPresets, setFilteredPresets] = useState(PRESETS);
     const [page, setPage] = useState(0);
     const [searchMode, setSearchMode] = useState(false);
@@ -397,6 +438,21 @@ function HomeScreen({ prompt, setPrompt, onGenerate, onPreset, stars }) {
                 </div>
             </div>
 
+            <div className="mode-toggle-container">
+                <button 
+                    className={`mode-btn ${gameMode === 'simple' ? 'active' : ''}`}
+                    onClick={() => setGameMode('simple')}
+                >
+                    Simple Mode
+                </button>
+                <button 
+                    className={`mode-btn ${gameMode === 'numbered' ? 'active' : ''}`}
+                    onClick={() => setGameMode('numbered')}
+                >
+                    Numbered Mode
+                </button>
+            </div>
+
             <p className="presets-label">
                 {searchMode ? `Found ${filteredPresets.length} matching presets` : 'Pick a preset'}
             </p>
@@ -445,98 +501,176 @@ function HomeScreen({ prompt, setPrompt, onGenerate, onPreset, stars }) {
     );
 }
 
-function CanvasScreen({ imageObj, onBack, onComplete }) {
+function CanvasScreen({ imageObj, gameMode, onBack, onComplete }) {
     const canvasRef = useRef(null);
     const [ctx, setCtx] = useState(null);
-    const [displayData, setDisplayData] = useState(null); // Uint8ClampedArray
-    const [referenceData, setReferenceData] = useState(null); // Uint8ClampedArray (Original)
     const [dims, setDims] = useState({ w: 0, h: 0 });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [completed, setCompleted] = useState(false);
     const [showOverlay, setShowOverlay] = useState(false);
+    const [analyzing, setAnalyzing] = useState(true);
+    
+    // Engine State
+    const [regions, setRegions] = useState([]);
+    const [palette, setPalette] = useState([]);
+    const [regionMap, setRegionMap] = useState(null);
+    const [selectedPaletteId, setSelectedPaletteId] = useState(null);
 
-    // Delay the overlay so the user can enjoy the confetti on the finished artwork first
-    useEffect(() => {
-        if (completed) {
-            const timer = setTimeout(() => {
-                setShowOverlay(true);
-            }, 2500);
-            return () => clearTimeout(timer);
-        }
-    }, [completed]);
+    // Helper: Repaint the canvas based on current region states
+    const repaintCanvas = useCallback((currentRegions, currentPalette, currentSelectedId) => {
+        if (!ctx || !currentRegions) return;
+        
+        // We act on a fresh buffer or modifying existing is hard without pixel access.
+        // Easiest is to modify the ImageData directly.
+        const imageData = ctx.getImageData(0, 0, dims.w, dims.h);
+        const data = imageData.data;
 
+        // We assume the imageData currently has the black lines intact.
+        // We only need to update the regions.
+        
+        currentRegions.forEach(reg => {
+            const isSelectedGroup = (gameMode === 'numbered' && reg.paletteId === currentSelectedId);
+            
+            // Determine color for this region
+            let r, g, b;
+            
+            if (reg.filled) {
+                // Show real color
+                [r, g, b] = reg.color;
+            } else if (isSelectedGroup) {
+                // Show hint grey
+                r = 220; g = 220; b = 220;
+            } else {
+                // Show white (empty)
+                r = 255; g = 255; b = 255;
+            }
+
+            // Paint all pixels in this region
+            // Note: This loop over pixels is fast enough for interaction? 
+            // If many regions update, maybe slow. But usually only one fills or all change on palette switch.
+            // Optimization: Only update regions that changed? 
+            // For palette switch, many change. 
+            // The pixel list makes this efficient.
+            const len = reg.pixels.length;
+            for(let i=0; i<len; i++) {
+                const pxIdx = reg.pixels[i] * 4;
+                data[pxIdx] = r;
+                data[pxIdx+1] = g;
+                data[pxIdx+2] = b;
+                // Alpha is already 255 or whatever from original
+            }
+        });
+        
+        ctx.putImageData(imageData, 0, 0);
+
+    }, [ctx, dims, gameMode]);
+
+    // Initial Load & Analysis
     useEffect(() => {
         if (!canvasRef.current) return;
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d', { willReadFrequently: true });
         setCtx(context);
 
-        // Setup Canvas Size
-        const maxSize = Math.min(window.innerWidth - 40, window.innerHeight - 200, 600);
+        const maxSize = Math.min(window.innerWidth - 20, window.innerHeight - 300, 600);
         canvas.width = maxSize;
         canvas.height = maxSize;
         setDims({ w: maxSize, h: maxSize });
 
-        // Draw and Process
-        // 1. Draw Original to get Reference Data
-        context.drawImage(imageObj.img, 0, 0, maxSize, maxSize);
-        const refImageData = context.getImageData(0, 0, maxSize, maxSize);
-        const refData = refImageData.data;
-        setReferenceData(new Uint8ClampedArray(refData)); // Deep copy for reference
+        const img = imageObj.img;
+        context.drawImage(img, 0, 0, maxSize, maxSize);
 
-        // 2. Process for Display (Remove Colors -> White)
-        // Algorithm: If pixel is not black (line), make it white.
-        const dispImageData = context.getImageData(0, 0, maxSize, maxSize);
-        const dData = dispImageData.data;
+        // Run Analysis (Async to allow UI to show spinner if needed)
+        setTimeout(() => {
+            const { regions: r, regionMap: rm, palette: p } = analyzeImage(context, maxSize, maxSize);
+            setRegions(r);
+            setRegionMap(rm);
+            setPalette(p);
+            setAnalyzing(false);
+            
+            // Initial Paint (Everything white except lines)
+            // We need to clear the colors first
+            const imageData = context.getImageData(0, 0, maxSize, maxSize);
+            const data = imageData.data;
+            r.forEach(reg => {
+                const len = reg.pixels.length;
+                for(let i=0; i<len; i++) {
+                    const idx = reg.pixels[i] * 4;
+                    data[idx] = 255; data[idx+1] = 255; data[idx+2] = 255;
+                }
+            });
+            context.putImageData(imageData, 0, 0);
 
-        for (let i = 0; i < dData.length; i += 4) {
-            const r = dData[i];
-            const g = dData[i+1];
-            const b = dData[i+2];
+        }, 50); // Small delay to render loader
 
-            // Calculate luminance to detect dark lines
-            const lum = 0.2126*r + 0.7152*g + 0.0722*b;
+    }, [imageObj]);
 
-            if (lum > 50) { // If it's not dark
-                dData[i] = 255;   // R
-                dData[i+1] = 255; // G
-                dData[i+2] = 255; // B
-            } else {
-                // Ensure lines are pure black for consistency
-                dData[i] = 0;
-                dData[i+1] = 0;
-                dData[i+2] = 0;
-            }
+    // Handle Palette Selection Paint
+    useEffect(() => {
+        if (!analyzing && regions.length > 0) {
+            repaintCanvas(regions, palette, selectedPaletteId);
         }
-        
-        context.putImageData(dispImageData, 0, 0);
-        setDisplayData(dData); // Keep reference to current live data
+    }, [selectedPaletteId, analyzing, regions, palette, repaintCanvas]);
 
-    }, [canvasRef, imageObj]);
 
     const handleTap = (e) => {
-        if (!ctx || !displayData || !referenceData || completed) return;
+        if (analyzing || completed || !regionMap) return;
 
         const rect = canvasRef.current.getBoundingClientRect();
-        
-        // Pointer events provide unified coordinates
         const x = Math.floor((e.clientX - rect.left) * (dims.w / rect.width));
         const y = Math.floor((e.clientY - rect.top) * (dims.h / rect.height));
 
         if (x < 0 || y < 0 || x >= dims.w || y >= dims.h) return;
 
-        // Perform Logic
-        floodFill(displayData, referenceData, x, y, dims.w, dims.h);
-        
-        // Put back to canvas
-        const newImageData = new ImageData(displayData, dims.w, dims.h);
-        ctx.putImageData(newImageData, 0, 0);
+        const idx = y * dims.w + x;
+        const regionId = regionMap[idx];
 
-        // Check completion
-        // Use a small timeout to not block the UI update
-        requestAnimationFrame(() => {
-            const progress = checkCompletion(displayData, referenceData);
-            if (progress > 0.98) { // 98% threshold to account for tiny missed pixels
+        if (regionId === -1) return; // Clicked a line or invalid
+
+        const region = regions[regionId];
+        if (region.filled) return; // Already done
+
+        // Game Logic
+        let success = false;
+        
+        if (gameMode === 'simple') {
+            success = true;
+        } else {
+            // Numbered Mode
+            if (selectedPaletteId !== null && region.paletteId === selectedPaletteId) {
+                success = true;
+            }
+        }
+
+        if (success) {
+            // Update Region
+            const newRegions = [...regions];
+            newRegions[regionId] = { ...region, filled: true };
+            setRegions(newRegions);
+            
+            // Check Palette Completion (for numbered mode)
+            if (gameMode === 'numbered') {
+                const pal = palette.find(p => p.id === region.paletteId);
+                const allFilled = pal.regionIds.every(rid => newRegions[rid].filled);
+                if (allFilled) {
+                    const newPalette = [...palette];
+                    const pIdx = newPalette.findIndex(p => p.id === region.paletteId);
+                    newPalette[pIdx] = { ...newPalette[pIdx], completed: true };
+                    setPalette(newPalette);
+                    setSelectedPaletteId(null); // Deselect
+                }
+            }
+
+            // Repaint happens via effect or we can optimize and just paint this region here?
+            // Repainting all via effect is safer but let's see performance.
+            // For strict sync, we depend on state.
+        }
+    };
+
+    // Check Total Completion
+    useEffect(() => {
+        if (regions.length > 0 && regions.every(r => r.filled)) {
+            if (!completed) {
                 setCompleted(true);
                 onComplete();
                 if (window.confetti) {
@@ -547,8 +681,16 @@ function CanvasScreen({ imageObj, onBack, onComplete }) {
                     });
                 }
             }
-        });
-    };
+        }
+    }, [regions, completed, onComplete]);
+
+    // Delay Overlay
+    useEffect(() => {
+        if (completed) {
+            const timer = setTimeout(() => setShowOverlay(true), 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [completed]);
 
     const handleSubmit = async () => {
         if (!canvasRef.current) return;
@@ -575,6 +717,13 @@ function CanvasScreen({ imageObj, onBack, onComplete }) {
 
     return (
         <div className="screen center-content">
+            {analyzing && (
+                 <div className="loading-overlay" style={{position:'absolute', borderRadius: 8}}>
+                    <div className="spinner"></div>
+                    <p>Preparing Magic...</p>
+                </div>
+            )}
+            
             <div className="canvas-container">
                 <canvas 
                     ref={canvasRef}
@@ -597,6 +746,22 @@ function CanvasScreen({ imageObj, onBack, onComplete }) {
                     </div>
                 )}
             </div>
+            
+            {gameMode === 'numbered' && !analyzing && !completed && (
+                <div className="palette-bar">
+                    {palette.map((p, i) => (
+                        <div 
+                            key={p.id}
+                            className={`palette-item ${selectedPaletteId === p.id ? 'selected' : ''} ${p.completed ? 'completed' : ''}`}
+                            style={{backgroundColor: `rgb(${p.color[0]}, ${p.color[1]}, ${p.color[2]})`}}
+                            onClick={() => setSelectedPaletteId(p.id)}
+                        >
+                            <div className="palette-number">{i + 1}</div>
+                            {p.completed && <div className="palette-check">✓</div>}
+                        </div>
+                    ))}
+                </div>
+            )}
             
             <div className="controls">
                 <button className="btn btn-secondary" onClick={onBack}>Back</button>

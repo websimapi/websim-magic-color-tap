@@ -249,6 +249,101 @@ p.subtitle {
     justify-content: center;
     padding-bottom: 20px;
     z-index: 10;
+    flex-wrap: wrap;
+}
+
+/* Mode Toggle */
+.mode-toggle-container {
+    display: flex;
+    background: #e0e0e0;
+    border-radius: 20px;
+    padding: 4px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.mode-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 8px;
+    border-radius: 16px;
+    font-weight: bold;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mode-btn.active {
+    background: white;
+    color: var(--primary);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Palette Bar (Numbered Mode) */
+.palette-bar {
+    width: 100%;
+    max-width: 600px;
+    overflow-x: auto;
+    display: flex;
+    gap: 12px;
+    padding: 10px 5px;
+    margin-bottom: 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+}
+
+.palette-bar::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.palette-item {
+    flex: 0 0 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s, border-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.palette-item.selected {
+    transform: scale(1.1) translateY(-5px);
+    border-color: var(--dark);
+    box-shadow: 0 5px 12px rgba(0,0,0,0.25);
+    z-index: 2;
+}
+
+.palette-item.completed {
+    display: none; /* Hide when done as requested */
+}
+
+.palette-check {
+    color: white;
+    font-size: 1.5rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.palette-number {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--primary);
+    color: white;
+    font-size: 0.7rem;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border: 2px solid white;
 }
 
 /* Header & Stars */
